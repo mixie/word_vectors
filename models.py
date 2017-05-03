@@ -9,7 +9,7 @@ from abc import ABCMeta,abstractmethod
 import numpy as np
 
 NGRAM_SIZES = [20,19,18,17]
-ngram_num = sum(NGRAM_SIZES)
+NGRAM_NUM = sum(NGRAM_SIZES)
 
 class ZeroMaskedEntries(Layer):
 
@@ -139,7 +139,7 @@ class VectorModel(object):
  
 
 class WordVectorModel(VectorModel):
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num, model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM, model=None):
         super(WordVectorModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "input_layer"
         self.ngram_size = None
@@ -170,7 +170,7 @@ class WordVectorModel(VectorModel):
 
 class NgramSumModel(VectorModel):
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num, model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM, model=None):
         super(NgramSumModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "lambda_1"
         self.ngram_size = ngram_size
@@ -198,7 +198,7 @@ class NgramSumModel(VectorModel):
         
 class NgramMaxModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num, model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM, model=None):
         super(NgramMaxModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "lambda_1"
         self.ngram_size = ngram_size
@@ -226,7 +226,7 @@ class NgramMaxModel(VectorModel):
 
 class NgramConvPaddedModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvPaddedModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "averagepooling1d_1"
         self.ngram_size = ngram_size
@@ -271,7 +271,7 @@ class NgramConvPaddedModel(VectorModel):
         
 class NgramConvShorterFirstModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvShorterFirstModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "averagepooling1d_1"
         self.ngram_size = ngram_size
@@ -301,7 +301,7 @@ class NgramConvShorterFirstModel(VectorModel):
 
 class NgramConvShorterFirstValidModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvShorterFirstValidModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "averagepooling1d_1"
         self.ngram_size = ngram_size
@@ -332,7 +332,7 @@ class NgramConvShorterFirstValidModel(VectorModel):
 
 class NgramConvBeginFirstValidModel(VectorModel):
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvBeginFirstValidModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "convolution1d_1"
         self.emb_layer_name = "zeromaskedentries_1"
@@ -374,7 +374,7 @@ class NgramConvBeginFirstValidModel(VectorModel):
 
 class NgramConvShorterFirstGatedModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvShorterFirstGatedModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "averagepooling1d_1"
         self.ngram_size = ngram_size
@@ -408,7 +408,7 @@ class NgramConvShorterFirstGatedModel(VectorModel):
 
 class NgramConvBeginFirstValidGatedModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvBeginFirstValidGatedModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "convolution1d_1"
         self.ngram_size = ngram_size
@@ -453,7 +453,7 @@ class NgramConvBeginFirstValidGatedModel(VectorModel):
 
 class NgramConvBeginFirstModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvBeginFirstModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "averagepooling1d_1"
         self.ngram_size = ngram_size
@@ -497,7 +497,7 @@ class NgramConvBeginFirstModel(VectorModel):
 
 class NgramConvMultModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramConvMultModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "merge_1"
         self.ngram_size = ngram_size
@@ -607,7 +607,7 @@ class NgramConvMultModel(VectorModel):
 
 class NgramGRUModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramGRUModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "???"
         self.ngram_size = ngram_size
@@ -649,7 +649,7 @@ class NgramGRUModel(VectorModel):
 
 class NgramGRUMultModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramGRUMultModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "merge_1"
         self.ngram_size = ngram_size
@@ -751,9 +751,9 @@ class NgramGRUMultModel(VectorModel):
             res.append(emb.predict(inps))
         return res
 
-class NgramGRUBeginFirstModel(VectorModel): #fungoval rpedtym dobre, otestovat znova
+class NgramGRUBeginFirstModel(VectorModel): 
 
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
+    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=NGRAM_NUM,model=None):
         super(NgramGRUBeginFirstModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "reshape_1"
         self.ngram_size = ngram_size

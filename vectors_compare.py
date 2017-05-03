@@ -12,32 +12,37 @@ import math, random
 from keras.models import Model,Sequential
 from keras.layers import Input, Dense, embeddings, merge, Lambda, Flatten,Reshape,convolutional,pooling,recurrent,Activation
 from scipy.stats import spearmanr
+import argparse
 
-#constants
-vec_size = 100
-start = int(sys.argv[1])
-num_input_files = int(sys.argv[2])
-nn_type = sys.argv[3] #ngram_sum
-max_ngram_num = 15
+VECTOR_SIZE = 100
+MAX_NGRAM_NUM = 74
+
 import_ngrams = None
 simple_model = None
-if len(sys.argv)>4:
-    import_ngrams = helpers.read_ngrams_from_file(sys.argv[4])
 
 simple_konv_model = None
 
+parser = argparse.ArgumentParser(description='Compare our results with datasets.')
+parser.add_argument('first', nargs=1, help='1. weight file number')
+parser.add_argument('last', nargs=1, help='last weight file number')
+parser.add_argument('type', nargs=1, help='type of model')
+parser.add_argument('--imp', nargs='?', help='important ngrams file, if applicable')
+args = parser.parse_args()
 
-#python vectors_compare.py ../preprocessed/preprocessed/ 5 ngram_sum 0.1
+nn_type = args.type[0]
+start = int(args.first[0])
+num_input_files = int(args.last[0])
+
+if args.imp is not None:
+    import_ngrams = helpers.read_ngrams_from_file(args.imp)
 
 
 datasets = {"rw":"../../../testdata/rw.txt","sim":"../../../testdata/combined.tab"}
 
-#read model structure
 with open('model.json', 'r') as json_file:
     model_json = json_file.read()
     model = model_from_json(model_json,custom_objects={"ZeroMaskedEntries": helpers.models.ZeroMaskedEntries})
 
-#read ngram keys
 ngram_keys = {}
 i = 0
 with open('all_unique_ngrams.txt', 'r') as input1:
@@ -58,7 +63,7 @@ with open('all_unique_words.txt', 'r') as input1:
 
 def create_simple_conv_model(my_model):
     model = Sequential()
-    conv = convolutional.Convolution1D(100, 74, border_mode='valid',input_shape=(74,100))
+    conv = convolutional.Convolution1D(VECTOR_SIZE, MAX_NGRAM_NUM, border_mode='valid',input_shape=(MAX_NGRAM_NUM,VECTOR_SIZE))
     model.add(conv)
     model.compile(optimizer='rmsprop',
         loss='categorical_crossentropy',
@@ -75,14 +80,11 @@ def predict_with_zeroed_ngrams(my_model,word,ngram_keys,keys2,new_model):
         if ng not in keys2:
             zero_indexes.append(i)
         i += 1
-    for i in range(74):
+    for i in range(MAX_NGRAM_NUM):
         if i in zero_indexes:
             ngram_vector[0,i,:] = 0
     return new_model.predict(ngram_vector)
 
-
-
-#funkcia, ktora porovna natrenovane hodnoty s danym datasetom
 def compare_to_dataset(dataset_file,ngram_keys,simple_model=None,import_ngrams=None):
     ngram_results = []
     file_data = []

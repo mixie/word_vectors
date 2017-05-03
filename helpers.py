@@ -94,7 +94,6 @@ def read_input_file(input1,word_keys):
         for w in l.strip().split(","):
             if w in word_keys:
                 act_file.append(w)
-    print "act file len:",len(act_file)
     return act_file
 
 def generate_word_keys(num_input_files,input_folder,input_file_name,min_word_freq):
