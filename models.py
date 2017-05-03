@@ -8,21 +8,10 @@ from helpers import *
 from abc import ABCMeta,abstractmethod
 import numpy as np
 
-ngram_sizes = [20,19,18,17]
-ngram_num = sum(ngram_sizes)
+NGRAM_SIZES = [20,19,18,17]
+ngram_num = sum(NGRAM_SIZES)
 
 class ZeroMaskedEntries(Layer):
-    """
-    This layer is called after an Embedding layer.
-    It zeros out all of the masked-out embeddings.
-    It also swallows the mask without passing it on.
-    You can change this to default pass-on behavior as follows:
-    def compute_mask(self, x, mask=None):
-        if not self.mask_zero:
-            return None
-        else:
-            return K.not_equal(x, 0)
-    """
 
     def __init__(self, **kwargs):
         self.support_mask = True
@@ -58,6 +47,8 @@ class VectorModel(object):
         self.emb_layer_model = None
         self.vector_layer_name = ""
         self.emb_layer_name = "zeromaskedentries_1"
+        self.min_ngram_size = 3
+        self.max_ngram_size = 6
 
     @abstractmethod
     def create_input_for_word(self,word,keys,change_ngram=None):
@@ -73,7 +64,7 @@ class VectorModel(object):
     def create_ngrams_for_word(self,word,keys,keys2 = None):
         word = "^"+word+"$"
         ngrams = []
-        for k in range(3,7):
+        for k in range(self.min_ngram_size,self.max_ngram_size+1):
             for i in range(0,len(word)-k+1):
                 if word[i:i+k] in keys:
                     if keys2 is None or word[i:i+k] in keys2:
@@ -83,7 +74,7 @@ class VectorModel(object):
     def create_false_ngrams_for_word(self,word,keys):
         word = "^"+word+"$"
         ngrams = []
-        for k in range(3,7):
+        for k in range(self.min_ngram_size,self.max_ngram_size+1):
             for i in range(0,len(word)-k+1):
                 if word[i:i+k] in keys:
                     ngrams.append(word[i:i+k])
@@ -148,14 +139,11 @@ class VectorModel(object):
  
 
 class WordVectorModel(VectorModel):
-    """docstring for WordVector"""
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num, model=None):
         super(WordVectorModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
         self.vector_layer_name = "input_layer"
         self.ngram_size = None
         self.max_ngram_num = None
-
-
         
     def create_emb_layer(self):
         iw = Input(shape=(1,), dtype='int32', name="inputword")
@@ -195,7 +183,7 @@ class NgramSumModel(VectorModel):
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size))
         zero_masked_emd = zm(vv_iw)
-        sl = Lambda(lambda x:K.expand_dims(K.sum(x,1),1),output_shape=lambda s: (None,1, 100))
+        sl = Lambda(lambda x:K.expand_dims(K.sum(x,1),1),output_shape=lambda s: (None,1, self.vector_size))
         sum_vv = sl(zero_masked_emd)
         return ([iw],emb_in,sum_vv)
 
@@ -208,7 +196,7 @@ class NgramSumModel(VectorModel):
             res[change_ngram] = rand_int
         return np.array(res)
         
-class NgramMaxModel(VectorModel): #asi velmi nefunguje
+class NgramMaxModel(VectorModel): 
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num, model=None):
         super(NgramMaxModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -223,7 +211,7 @@ class NgramMaxModel(VectorModel): #asi velmi nefunguje
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size/2))
         zero_masked_emd = zm(vv_iw)
-        sl = Lambda(lambda x:K.expand_dims(K.concatenate([K.max(x,1),K.min(x,1)]),1),output_shape=lambda s: (None,1, 100))
+        sl = Lambda(lambda x:K.expand_dims(K.concatenate([K.max(x,1),K.min(x,1)]),1),output_shape=lambda s: (None,1, self.vector_size))
         sum_vv = sl(zero_masked_emd)
         return ([iw],emb_in,sum_vv)
 
@@ -248,7 +236,7 @@ class NgramConvPaddedModel(VectorModel):
         iw = Input(shape=(self.max_ngram_num,), dtype='int32', name="inputword")
         emb_in = embeddings.Embedding(output_dim=self.vector_size, input_dim=self.ngram_size,init="uniform",name="input_layer")
         vv_iw = emb_in(iw)
-        conv_l = convolutional.Convolution1D(100, 30, border_mode='same')
+        conv_l = convolutional.Convolution1D(self.vector_size, 30, border_mode='same')
         conv = conv_l(vv_iw)
         pool = pooling.AveragePooling1D(self.max_ngram_num,border_mode="same")
         pool_res = pool(conv)
@@ -260,7 +248,7 @@ class NgramConvPaddedModel(VectorModel):
     def create_ngrams_for_word(self,word,keys,keys2=None):
         word = "^"+word+"$"
         ngrams = []
-        for k in range(3,7):
+        for k in range(self.min_ngram_size,self.max_ngram_size+1):
             counter = 0
             for i in range(0,len(word)-k+1):
                 counter += 1
@@ -269,7 +257,7 @@ class NgramConvPaddedModel(VectorModel):
                         ngrams.append(word[i:i+k])
                 else:
                     ngrams.append("*UNK*")
-            for dif in range(ngram_sizes[k-3]-counter):
+            for dif in range(NGRAM_SIZES[k-3]-counter):
                 ngrams.append("*AFT*") 
         return ngrams
 
@@ -281,7 +269,7 @@ class NgramConvPaddedModel(VectorModel):
         return np.array(res)
 
         
-class NgramConvShorterFirstModel(VectorModel): #fungoval rpedtym dobre, otestovat znova
+class NgramConvShorterFirstModel(VectorModel): 
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
         super(NgramConvShorterFirstModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -296,7 +284,7 @@ class NgramConvShorterFirstModel(VectorModel): #fungoval rpedtym dobre, otestova
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size))
         zero_masked_emd = zm(vv_iw)
-        conv_l = convolutional.Convolution1D(100, 30, border_mode='same')
+        conv_l = convolutional.Convolution1D(self.vector_size, 30, border_mode='same')
         conv = conv_l(zero_masked_emd)
         pool = pooling.AveragePooling1D(self.max_ngram_num,border_mode="same")
         pool_res = pool(conv)
@@ -309,11 +297,9 @@ class NgramConvShorterFirstModel(VectorModel): #fungoval rpedtym dobre, otestova
             res.append(0)
         if change_ngram is not None:
             res[change_ngram] = rand_int
-        #if len(res)!=self.max_ngram_num:
-        #    print "ERROR lengts",len(res),self.max_ngram_num
         return np.array(res)
 
-class NgramConvShorterFirstValidModel(VectorModel): #fungoval rpedtym dobre, otestovat znova
+class NgramConvShorterFirstValidModel(VectorModel): 
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
         super(NgramConvShorterFirstValidModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -328,7 +314,7 @@ class NgramConvShorterFirstValidModel(VectorModel): #fungoval rpedtym dobre, ote
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size))
         zero_masked_emd = zm(vv_iw)
-        conv_l = convolutional.Convolution1D(100, 30, border_mode='valid')
+        conv_l = convolutional.Convolution1D(self.vector_size, 30, border_mode='valid')
         conv = conv_l(zero_masked_emd)
         pool = pooling.AveragePooling1D(45,border_mode='valid')
         pool_res = pool(conv)
@@ -341,12 +327,10 @@ class NgramConvShorterFirstValidModel(VectorModel): #fungoval rpedtym dobre, ote
             res.append(0)
         if change_ngram is not None:
             res[change_ngram] = rand_int
-        #if len(res)!=self.max_ngram_num:
-        #    print "ERROR lengts",len(res),self.max_ngram_num
         return np.array(res)
 
 
-class NgramConvBeginFirstValidModel(VectorModel): #fungoval rpedtym dobre, otestovat znova
+class NgramConvBeginFirstValidModel(VectorModel):
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
         super(NgramConvBeginFirstValidModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -362,7 +346,7 @@ class NgramConvBeginFirstValidModel(VectorModel): #fungoval rpedtym dobre, otest
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size))
         zero_masked_emd = zm(vv_iw)
-        conv_l = convolutional.Convolution1D(100, self.max_ngram_num, border_mode='valid')
+        conv_l = convolutional.Convolution1D(self.vector_size, self.max_ngram_num, border_mode='valid')
         conv = conv_l(zero_masked_emd)
         return ([iw],emb_in,conv)
 
@@ -370,7 +354,7 @@ class NgramConvBeginFirstValidModel(VectorModel): #fungoval rpedtym dobre, otest
         word = "^"+word+"$"
         ngrams = []
         for i in range(0,len(word)):
-            for k in range(3,7):
+            for k in range(self.min_ngram_size,self.max_ngram_size+1):
                 if i > len(word)-k:
                     continue
                 if word[i:i+k] in keys:
@@ -385,12 +369,10 @@ class NgramConvBeginFirstValidModel(VectorModel): #fungoval rpedtym dobre, otest
             res.append(0)
         if change_ngram is not None:
             res[change_ngram] = rand_int
-        #if len(res)!=self.max_ngram_num:
-        #    print "ERROR lengts",len(res),self.max_ngram_num
         return np.array(res)
 
 
-class NgramConvShorterFirstGatedModel(VectorModel): #fungoval rpedtym dobre, otestovat znova
+class NgramConvShorterFirstGatedModel(VectorModel): 
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
         super(NgramConvShorterFirstGatedModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -405,7 +387,7 @@ class NgramConvShorterFirstGatedModel(VectorModel): #fungoval rpedtym dobre, ote
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size))
         zero_masked_emd = zm(vv_iw)
-        conv_l = convolutional.Convolution1D(100, 30, border_mode='same')
+        conv_l = convolutional.Convolution1D(self.vector_size, 30, border_mode='same')
         conv = conv_l(zero_masked_emd)
         sigm_conv = Activation("sigmoid")(conv)
         mult_l = Merge(mode='mul')
@@ -421,12 +403,10 @@ class NgramConvShorterFirstGatedModel(VectorModel): #fungoval rpedtym dobre, ote
             res.append(0)
         if change_ngram is not None:
             res[change_ngram] = rand_int
-        #if len(res)!=self.max_ngram_num:
-        #    print "ERROR lengts",len(res),self.max_ngram_num
         return np.array(res)
 
 
-class NgramConvBeginFirstValidGatedModel(VectorModel): #fungoval rpedtym dobre, otestovat znova
+class NgramConvBeginFirstValidGatedModel(VectorModel): 
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
         super(NgramConvBeginFirstValidGatedModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -441,8 +421,8 @@ class NgramConvBeginFirstValidGatedModel(VectorModel): #fungoval rpedtym dobre, 
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size))
         zero_masked_emd = zm(vv_iw)
-        conv_l1 = convolutional.Convolution1D(100, self.max_ngram_num, border_mode='valid')
-        conv_l2 = convolutional.Convolution1D(100, self.max_ngram_num, border_mode='valid')
+        conv_l1 = convolutional.Convolution1D(self.vector_size, self.max_ngram_num, border_mode='valid')
+        conv_l2 = convolutional.Convolution1D(self.vector_size, self.max_ngram_num, border_mode='valid')
         conv1 = conv_l1(zero_masked_emd)
         conv2 = conv_l2(zero_masked_emd)
         sigm_conv = Activation("sigmoid")(conv2)
@@ -454,7 +434,7 @@ class NgramConvBeginFirstValidGatedModel(VectorModel): #fungoval rpedtym dobre, 
         word = "^"+word+"$"
         ngrams = []
         for i in range(0,len(word)):
-            for k in range(3,7):
+            for k in range(self.min_ngram_size,self.max_ngram_size+1):
                 if i > len(word)-k:
                     continue
                 if word[i:i+k] in keys:
@@ -469,8 +449,6 @@ class NgramConvBeginFirstValidGatedModel(VectorModel): #fungoval rpedtym dobre, 
             res.append(0)
         if change_ngram is not None:
             res[change_ngram] = rand_int
-        #if len(res)!=self.max_ngram_num:
-        #    print "ERROR lengts",len(res),self.max_ngram_num
         return np.array(res)
 
 class NgramConvBeginFirstModel(VectorModel): 
@@ -488,7 +466,7 @@ class NgramConvBeginFirstModel(VectorModel):
         zm = ZeroMaskedEntries()
         zm.build((None,self.max_ngram_num,self.vector_size))
         zero_masked_emd = zm(vv_iw)
-        conv_l = convolutional.Convolution1D(100, 30, border_mode='same')
+        conv_l = convolutional.Convolution1D(self.vector_size, 30, border_mode='same')
         conv = conv_l(zero_masked_emd)
         pool = pooling.AveragePooling1D(self.max_ngram_num,border_mode="same")
         pool_res = pool(conv)
@@ -498,7 +476,7 @@ class NgramConvBeginFirstModel(VectorModel):
         word = "^"+word+"$"
         ngrams = []
         for i in range(0,len(word)):
-            for k in range(3,7):
+            for k in range(self.min_ngram_size,self.max_ngram_size+1):
                 if i > len(word)-k:
                     continue
                 if word[i:i+k] in keys:
@@ -513,8 +491,6 @@ class NgramConvBeginFirstModel(VectorModel):
             res.append(0)
         if change_ngram is not None:
             res[change_ngram] = rand_int
-        #if len(res)!=self.max_ngram_num:
-        #    print "ERROR lengts",len(res),self.max_ngram_num
         return np.array(res)
 
 
@@ -552,13 +528,13 @@ class NgramConvMultModel(VectorModel):
         zero_masked_emd5 = zm(vv_iw5)
         zero_masked_emd6 = zm(vv_iw6)
 
-        conv_l3 = convolutional.Convolution1D(100, 10, border_mode='same')
+        conv_l3 = convolutional.Convolution1D(self.vector_size, 10, border_mode='same')
         conv3 = conv_l3(zero_masked_emd3)
-        conv_l4 = convolutional.Convolution1D(100, 10, border_mode='same')
+        conv_l4 = convolutional.Convolution1D(self.vector_size, 10, border_mode='same')
         conv4 = conv_l4(zero_masked_emd4)
-        conv_l5 = convolutional.Convolution1D(100, 10, border_mode='same')
+        conv_l5 = convolutional.Convolution1D(self.vector_size, 10, border_mode='same')
         conv5 = conv_l5(zero_masked_emd5)
-        conv_l6 = convolutional.Convolution1D(100, 10, border_mode='same')
+        conv_l6 = convolutional.Convolution1D(self.vector_size, 10, border_mode='same')
         conv6 = conv_l6(zero_masked_emd6)
         pool3 = pooling.AveragePooling1D(self.max_ngram_one_class,border_mode="same")
         pool_res3 = pool3(conv3)
@@ -576,7 +552,7 @@ class NgramConvMultModel(VectorModel):
     def create_ngrams_for_word(self,word,keys,keys2=None):
         word = "^"+word+"$"
         ngrams = []
-        for k in range(3,7):
+        for k in range(self.min_ngram_size,self.max_ngram_size+1):
             counter = 0
             for i in range(0,len(word)-k+1):
                 counter += 1
@@ -629,49 +605,7 @@ class NgramConvMultModel(VectorModel):
             res.append(emb.predict(inps))
         return res
 
-class NgramLSTMModel(VectorModel): #prerobit na 4 lstm tak ako conv2
-
-    def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
-        super(NgramLSTMModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
-        self.vector_layer_name = "???"
-        self.ngram_size = ngram_size
-        self.max_ngram_num = max_ngram_num
-
-    def create_emb_layer(self):
-        iw = Input(shape=(self.max_ngram_num,), dtype='int32', name="inputword")
-        emb_in = embeddings.Embedding(output_dim=self.vector_size, input_dim=self.ngram_size,init="uniform",name="input_layer")
-        vv_iw = emb_in(iw)
-        lstm_l = recurrent.LSTM(100,return_sequences=False)
-        lstm = lstm_l(vv_iw)
-        return ([iw],emb_in,lstm)
-    
-    def get_first_ngram_keys(self):
-        return ({"*UNK*":0,"*AFT*":1},["*UNK*","*AFT*"],2)
-
-    def create_ngrams_for_word(self,word,keys,keys2=None):
-        word = "^"+word+"$"
-        ngrams = []
-        for k in range(3,7):
-            counter = 0
-            for i in range(0,len(word)-k+1):
-                counter += 1
-                if word[i:i+k] in keys:
-                    if keys2 is None or word[i:i+k] in keys2:
-                        ngrams.append(word[i:i+k])
-                else:
-                    ngrams.append("*UNK*")
-            for dif in range(ngram_sizes[k-3]-counter):
-                ngrams.append("*AFT*") 
-        return ngrams
-
-    def create_input_for_word(self,word,keys,change_ngram=None,rand_int=None,keys2=None):
-        ngrams = self.create_ngrams_for_word(word, keys,keys2)
-        res = [keys[ng] for ng in ngrams[:self.max_ngram_num]]
-        if change_ngram is not None:
-            res[change_ngram] = rand_int
-        return np.array(res)
-
-class NgramGRUModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit pred lstm!!!!
+class NgramGRUModel(VectorModel): 
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
         super(NgramGRUModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -683,7 +617,7 @@ class NgramGRUModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit pred
         iw = Input(shape=(self.max_ngram_num,), dtype='int32', name="inputword")
         emb_in = embeddings.Embedding(output_dim=self.vector_size, input_dim=self.ngram_size,init="uniform",name="input_layer")
         vv_iw = emb_in(iw)
-        lstm_l = recurrent.GRU(100,return_sequences=False)
+        lstm_l = recurrent.GRU(self.vector_size,return_sequences=False)
         lstm = lstm_l(vv_iw)
         return ([iw],emb_in,lstm)
     
@@ -693,7 +627,7 @@ class NgramGRUModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit pred
     def create_ngrams_for_word(self,word,keys,keys2=None):
         word = "^"+word+"$"
         ngrams = []
-        for k in range(3,7):
+        for k in range(self.min_ngram_size,self.max_ngram_size+1):
             counter = 0
             for i in range(0,len(word)-k+1):
                 counter += 1
@@ -702,7 +636,7 @@ class NgramGRUModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit pred
                         ngrams.append(word[i:i+k])
                 else:
                     ngrams.append("*UNK*")
-            for dif in range(ngram_sizes[k-3]-counter):
+            for dif in range(NGRAM_SIZES[k-3]-counter):
                 ngrams.append("*AFT*") 
         return ngrams
 
@@ -713,7 +647,7 @@ class NgramGRUModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit pred
             res[change_ngram] = rand_int
         return np.array(res)
 
-class NgramGRUMultModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit pred lstm!!!!
+class NgramGRUMultModel(VectorModel): 
 
     def __init__(self, vector_size=None,negative_sample_num=5,voc_size=None,learning_rate=None,ngram_size=None,max_ngram_num=ngram_num,model=None):
         super(NgramGRUMultModel, self).__init__(vector_size,negative_sample_num,voc_size,learning_rate,model)
@@ -742,10 +676,10 @@ class NgramGRUMultModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit 
         zero_masked_emd5 = zm(vv_iw5)
         zero_masked_emd6 = zm(vv_iw6)        
 
-        lstm_l3 = recurrent.GRU(100,return_sequences=False)
-        lstm_l4 = recurrent.GRU(100,return_sequences=False)
-        lstm_l5 = recurrent.GRU(100,return_sequences=False)
-        lstm_l6 = recurrent.GRU(100,return_sequences=False)
+        lstm_l3 = recurrent.GRU(self.vector_size,return_sequences=False)
+        lstm_l4 = recurrent.GRU(self.vector_size,return_sequences=False)
+        lstm_l5 = recurrent.GRU(self.vector_size,return_sequences=False)
+        lstm_l6 = recurrent.GRU(self.vector_size,return_sequences=False)
 
         lstm3 = lstm_l3(zero_masked_emd3)
         lstm4 = lstm_l4(zero_masked_emd4)
@@ -764,7 +698,7 @@ class NgramGRUMultModel(VectorModel): #prerobit na 4 lstm tak ako conv2, pustit 
     def create_ngrams_for_word(self,word,keys,keys2=None):
         word = "^"+word+"$"
         ngrams = []
-        for k in range(3,7):
+        for k in range(self.min_ngram_size,self.max_ngram_size+1):
             counter = 0
             for i in range(0,len(word)-k+1):
                 counter += 1
@@ -836,7 +770,7 @@ class NgramGRUBeginFirstModel(VectorModel): #fungoval rpedtym dobre, otestovat z
 
         zero_masked_emd = zm(vv_iw)
 
-        gru_l = recurrent.GRU(100,return_sequences=False)
+        gru_l = recurrent.GRU(self.vector_size,return_sequences=False)
 
         gru = gru_l(zero_masked_emd)
 
@@ -847,7 +781,7 @@ class NgramGRUBeginFirstModel(VectorModel): #fungoval rpedtym dobre, otestovat z
         word = "^"+word+"$"
         ngrams = []
         for i in range(0,len(word)):
-            for k in range(3,7):
+            for k in range(self.min_ngram_size,self.max_ngram_size+1):
                 if i > len(word)-k:
                     continue
                 if word[i:i+k] in keys:
@@ -862,8 +796,6 @@ class NgramGRUBeginFirstModel(VectorModel): #fungoval rpedtym dobre, otestovat z
             res.append(0)
         if change_ngram is not None:
             res[change_ngram] = rand_int
-        #if len(res)!=self.max_ngram_num:
-        #    print "ERROR lengts",len(res),self.max_ngram_num
         return np.array(res)
 
 

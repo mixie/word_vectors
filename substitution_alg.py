@@ -14,11 +14,23 @@ from keras.regularizers import l2,l1,l1l2
 from keras import backend as K
 from keras.constraints import nonneg
 import random
+import argparse
 
+MAX_WORD_NGRAMS = 74
+NUM_ALL_NGRAMS = 51810
+RANDOM_SAMPLES = 100
 
-epoch = sys.argv[1]
-nn_type = sys.argv[2]
+epoch = 0
 
+parser = argparse.ArgumentParser(description='Run substitution algorithm.')
+parser.add_argument('type', nargs=1, help='type of model')
+parser.add_argument('--e', nargs='?', help='number of epoch to process, default 0')
+args = parser.parse_args()
+
+if args.e is not None:
+    epoch = int(args.e)
+
+nn_type = args.type[0]
 
 def get_input_output_for_word(word,my_model,ngram_keys,ngram_change=None,rand_int=None):
     word_vec = my_model.predict_vector_for_word(word,ngram_keys,ngram_change,rand_int)[0][0]
@@ -38,10 +50,10 @@ def count_ngram_weights_for_word(base_word,my_model,ngram_keys):
     biv,bov,ngrams = get_input_output_for_word(base_word, my_model, ngram_keys)
     ngram_weights = []
     order_weights = []
-    for i in range(74):
+    for i in range(MAX_WORD_NGRAMS):
         cos_sum = 0
-        for j in range(100):
-            iv,ov,_ = get_input_output_for_word(base_word, my_model, ngram_keys,i,random.randint(2,51810))
+        for j in range(RANDOM_SAMPLES):
+            iv,ov,_ = get_input_output_for_word(base_word, my_model, ngram_keys,i,random.randint(2,NUM_ALL_NGRAMS))
             cos_sum += cosine(bov,ov)
         if i < len(ngrams):
             ngram_weights.append((ngrams[i],cos_sum))
@@ -49,16 +61,10 @@ def count_ngram_weights_for_word(base_word,my_model,ngram_keys):
     return ngram_weights,order_weights
 
 
-#constants
-vec_size = 100
-max_ngram_num = 74
-
 model = helpers.load_model_from_file(epoch=epoch)
 ngram_keys = helpers.read_all_ngrams_from_file()
 word_keys = helpers.read_all_words_from_file()
-
 my_model = helpers.get_model_by_name(nn_type,model=model)
-
 random_words = helpers.get_10000mixed_words()
 
 
@@ -66,16 +72,15 @@ all_ow = []
 all_ngw = []
 i = 0
 for rw in random_words:
-    print "i",i
     ow,ngw = count_ngram_weights_for_word(rw, my_model, ngram_keys)
     all_ngw.extend(ngw)
     all_ow.extend(ow)
     if i%100==0:
-        with open( "all_ngw2.txt", "a" ) as out:
+        with open( "subst_all_ngram_weights.txt", "a" ) as out:
             for (k,v) in all_ngw:
                 out.write(str(k)+"\t"+str(v)+"\n")
 
-        with open( "all_ow2.txt", "a" ) as out:
+        with open( "subst_all_order_weights.txt", "a" ) as out:
             for (k,v) in all_ow:
                 out.write(str(k)+"\t"+str(v)+"\n")
         all_ow = []

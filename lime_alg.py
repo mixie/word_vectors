@@ -14,13 +14,25 @@ from keras import backend as K
 from keras.constraints import nonneg
 from collections import defaultdict
 import pickle
+import argparse
 
-epoch = sys.argv[1]
-nn_type = sys.argv[2]
 
-#constants
-vec_size = 100
-max_ngram_num = 74
+MAX_WORD_NGRAMS = 74
+NUM_ALL_NGRAMS = 51810
+VECTOR_SIZE = 100
+RANDOM_SAMPLES = 500
+
+epoch = 0
+
+parser = argparse.ArgumentParser(description='Run LIME algorithm.')
+parser.add_argument('type', nargs=1, help='type of model')
+parser.add_argument('--e', nargs='?', help='number of epoch to process, default 0')
+args = parser.parse_args()
+
+if args.e is not None:
+    epoch = int(args.e)
+
+nn_type = args.type[0]
 
 
 class MyLayer(Layer):
@@ -33,7 +45,6 @@ class MyLayer(Layer):
                                       initializer='uniform',
                                       trainable=True,
                                       regularizer=l1(0.1),constraint=nonneg())
-        #regularizer=l1(0.01))
         super(MyLayer, self).build(input_shape)  
 
     def call(self, x,mask=None):
@@ -91,11 +102,7 @@ def get_samples_for_word(word, num_samples, word_keys,ngram_keys, my_model):
 
 def create_and_fit_model(inputs,outputs,weights,batch_size=10,nb_epoch=8):
     new_model = Sequential()
-    #if isinstance(my_model, NgramConv2Model):
-    #   model.add(MyLayer(input_shape=(80,100)))
-    #else:
-
-    new_model.add(MyLayer(input_shape=(74,100)))
+    new_model.add(MyLayer(input_shape=(MAX_WORD_NGRAMS,VECTOR_SIZE)))
     new_model.add(Flatten())
     sgd = optimizers.SGD(lr=0.01, clipnorm=1.)
     new_model.compile(loss='cosine_proximity', optimizer=sgd)
@@ -105,14 +112,6 @@ def create_and_fit_model(inputs,outputs,weights,batch_size=10,nb_epoch=8):
 
 def make_weights_for_ngrams(pred_model,word_ngrams):
     weights = np.array(pred_model.layers[0].get_weights())
-    # if isinstance(my_model, NgramConv2Model):
-    #     ngram_lens = [[] for k in range(4)]
-    #     for ng in ngrams:
-    #         ngram_lens[len(ng)-3].append(ng)
-    #     for ng in ngram_lens:
-    #         while len(ng)<20:
-    #             ng.append("")
-    #     ngrams = [item for sublist in ngram_lens for item in sublist]
     ngram_weights = []
     order_weights = []
     print weights.shape
@@ -122,49 +121,11 @@ def make_weights_for_ngrams(pred_model,word_ngrams):
         order_weights.append((i,weights[0][i][0]))
     return ngram_weights,order_weights
 
-def lime_alg(word, my_model, word_keys, ngram_keys,samples=500):
+def lime_alg(word, my_model, word_keys, ngram_keys,samples):
     inputs,outputs,weights,word_ngrams = get_samples_for_word(word,samples,word_keys,ngram_keys, my_model)
     pred_model = create_and_fit_model(inputs,outputs,weights)
     ngram_weights,order_weights = make_weights_for_ngrams(pred_model,word_ngrams)
     return word,order_weights, ngram_weights
-
-# def slime_alg(instances,my_model,word_keys,ngram_keys,budget = 20):
-#     res = []
-#     for w in instances:
-#         res.append(lime_alg(w,my_model,word_keys,ngram_keys))
-#     feature_importances = defaultdict(lambda:0)
-#     all_features = set()
-#     for (w,order_weights,_) in res:
-#         for (num,ow) in order_weights:
-#             feature_importances[num] += ow
-#             if num not in all_features:
-#                 all_features.add(num)
-#     num_features = len(all_features)
-#     chosen_instances = set()
-#     chosen_features = set()
-#     for b in range(budget):
-#         max_example_gain = 0
-#         max_example = 0
-#         max_added_features = []
-#         for (w,order_weights,_) in res:
-#             if w not in chosen_instances:
-#                 word_gain = 0
-#                 added_features = []
-#                 for (num,ow) in order_weights:
-#                     print ow, feature_importances[num]/num_features, ow>feature_importances[num]/num_features
-#                     if num not in chosen_features and ow > (feature_importances[num]/num_features):
-#                         word_gain += feature_importances[num]
-#                         added_features.append(num)
-#                 if word_gain > max_example_gain:
-#                     max_example = w
-#                     max_added_features = added_features
-#                     max_example_gain = word_gain
-#         chosen_instances.add(max_example)
-#         chosen_features = chosen_features.union(set(max_added_features))
-#     instance_expl = [(w,ow) for (w,ow,_) in res if w in chosen_instances]
-#     return chosen_instances,chosen_features, instance_expl
-
-
 
 model = helpers.load_model_from_file(epoch=epoch)
 ngram_keys = helpers.read_all_ngrams_from_file()
@@ -179,35 +140,18 @@ all_ngw = []
 i = 0
 for rw in random_words:
     print "i",i
-    w,ow,ngw = lime_alg(rw,my_model,word_keys,ngram_keys,samples=500)
+    w,ow,ngw = lime_alg(rw,my_model,word_keys,ngram_keys,samples=RANDOM_SAMPLES)
     all_ngw.extend(ngw)
     all_ow.extend(ow)
     if i%100==0:
-        with open( "all_ngw.txt", "a" ) as out:
+        with open( "lime_all_ngram_weights.txt", "a" ) as out:
             for (k,v) in all_ngw:
                 out.write(str(k)+"\t"+str(v)+"\n")
 
-        with open( "all_ow.txt", "a" ) as out:
+        with open( "lime_all_order_weights.txt", "a" ) as out:
             for (k,v) in all_ow:
                 out.write(str(k)+"\t"+str(v)+"\n")
         all_ow = []
         all_ngw = []
     i += 1
-
-
-
-
-
-# inst, feat, expl = slime_alg(random_words,my_model,word_keys,ngram_keys)
-
-# print inst
-# print feat
-# for (ng,w) in ngw:
-#     print ng,w
-
-
-# random_words = helpers.generate_random_english_words(10000)
-# for rw in random_words:
-#     print rw
-
 
