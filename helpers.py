@@ -5,6 +5,7 @@ from keras.models import model_from_json
 import models
 from collections import defaultdict
 
+# read ngrams from text file, ngrams should be one per line
 def read_all_ngrams_from_file(path=""):
     ngram_keys = {}
     i = 0
@@ -16,6 +17,7 @@ def read_all_ngrams_from_file(path=""):
             i += 1
     return ngram_keys
 
+# read ngrams from text file, words should be one per line
 def read_all_words_from_file(path=""):
     word_keys = {}
     i = 0
@@ -27,6 +29,7 @@ def read_all_words_from_file(path=""):
             i += 1
     return word_keys
 
+# load pretrained model from file, might also load model weights
 def load_model_from_file(path="",load_weights=True,epoch=0):
     with open(path+'model.json', 'r') as json_file:
         model_json = json_file.read()
@@ -36,7 +39,7 @@ def load_model_from_file(path="",load_weights=True,epoch=0):
         return model
     return None
 
-
+# load model class by its text name
 def get_model_by_name(name, VECTOR_SIZE=None,NEGATIVE_SAMPLE_NUM=5,
     voc_size=None,learning_rate=None,ngram_voc_size=None,max_ngram_num=74, model=None):
     my_model = None
@@ -85,7 +88,7 @@ def get_model_by_name(name, VECTOR_SIZE=None,NEGATIVE_SAMPLE_NUM=5,
 
     return my_model
 
-
+# read text files (wikipedia) dumps in our preprocessed format
 def read_input_file(input1,word_keys):
     act_file = []
     for l in input1:
@@ -96,6 +99,7 @@ def read_input_file(input1,word_keys):
                 act_file.append(w)
     return act_file
 
+# read all input files and creates dictionary of all words and its ids, words = keys, ids = values
 def generate_word_keys(num_input_files,input_folder,input_file_name,min_word_freq):
     word_freq = defaultdict(lambda: 0)
 
@@ -116,6 +120,7 @@ def generate_word_keys(num_input_files,input_folder,input_file_name,min_word_fre
         i += 1
     return word_keys,words
 
+# return all ngrams for given word
 def get_ngrams_for_word(word):
     word = "^"+word+"$"
     ngrams = []
@@ -124,6 +129,7 @@ def get_ngrams_for_word(word):
             ngrams.append(word[i:i+k])
     return ngrams
 
+# generate all ngrams for given words, with at least given ngram sequency
 def generate_ngram_keys(model,word_keys,min_ngram_freq):
     ngrams_freq = defaultdict(lambda:0)
     for w in word_keys:
@@ -132,7 +138,6 @@ def generate_ngram_keys(model,word_keys,min_ngram_freq):
             ngrams_freq[ng] += 1
 
     ngram_freq_tups = sorted([(v,k) for k,v in ngrams_freq.iteritems() if v > min_ngram_freq],reverse=True)
-    print "num ngrams:",len(ngram_freq_tups)
     (ngram_keys,ngrams,i) = model.get_first_ngram_keys()
 
     for (v,ng) in ngram_freq_tups:
@@ -141,6 +146,7 @@ def generate_ngram_keys(model,word_keys,min_ngram_freq):
         i += 1
     return ngram_keys,ngrams
 
+# generate random english words, based on two different word sets
 def generate_random_english_words(num_words = None):
     words1 = []
     with open("/home/maja/testdata/350kwords.txt") as input1:
@@ -158,13 +164,15 @@ def generate_random_english_words(num_words = None):
     random.shuffle(words)
     return words
 
+# read previously generated random words to list
 def get_10000mixed_words():
     words = []
     with open("/home/maja/testdata/10000mixed.txt", "r") as input1:
         for l in input1:
             words.append(l.strip())
     return words
-
+    
+# read "nonstandard" ngrams from file
 def read_ngrams_from_file(f):
     ngrams = []
     with open(f, "r") as input1:
@@ -172,6 +180,7 @@ def read_ngrams_from_file(f):
             ngrams.append(l.strip())
     return ngrams
 
+# generate ngram keys based on ngrams file
 def generate_ngram_keys_from_file(model,f):
     print f
     (ngram_keys,ngrams,i) = model.get_first_ngram_keys()

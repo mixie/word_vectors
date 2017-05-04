@@ -16,10 +16,12 @@ from keras.constraints import nonneg
 import random
 import argparse
 
+#constants
 MAX_WORD_NGRAMS = 74
 NUM_ALL_NGRAMS = 51810
 RANDOM_SAMPLES = 100
 
+# process command line arguments
 epoch = 0
 
 parser = argparse.ArgumentParser(description='Run substitution algorithm.')
@@ -32,6 +34,7 @@ if args.e is not None:
 
 nn_type = args.type[0]
 
+# predict ngram vectors and word vector for given word
 def get_input_output_for_word(word,my_model,ngram_keys,ngram_change=None,rand_int=None):
     word_vec = my_model.predict_vector_for_word(word,ngram_keys,ngram_change,rand_int)[0][0]
     if my_model.get_num_inputs()>1:
@@ -44,7 +47,7 @@ def get_input_output_for_word(word,my_model,ngram_keys,ngram_change=None,rand_in
     ngrams = my_model.create_ngrams_for_word(word,ngram_keys)
     return ngram_vecs,word_vec,ngrams
 
-
+# substitution algorithm for one word
 def count_ngram_weights_for_word(base_word,my_model,ngram_keys):
     keys = word_keys.keys()
     biv,bov,ngrams = get_input_output_for_word(base_word, my_model, ngram_keys)
@@ -60,14 +63,14 @@ def count_ngram_weights_for_word(base_word,my_model,ngram_keys):
         order_weights.append((i,cos_sum))
     return ngram_weights,order_weights
 
-
+# load data from files
 model = helpers.load_model_from_file(epoch=epoch)
 ngram_keys = helpers.read_all_ngrams_from_file()
 word_keys = helpers.read_all_words_from_file()
 my_model = helpers.get_model_by_name(nn_type,model=model)
 random_words = helpers.get_10000mixed_words()
 
-
+# run whole algorithm for all random words, save after each 100
 all_ow = []
 all_ngw = []
 i = 0
