@@ -32,21 +32,18 @@ Due to compatibility reasons, command line argument names for model classes are 
 - `ngram_gru3` -NgramGRUBeginFirstModel
 
 ## How to compare word vectors to datasets
+### Install Requirements
+
 Requirements: Python 2.7, pip
 Nice to have: virtualenv 
 
 - run `pip install requirements.txt`
 
-### Install Keras
-`git clone https://github.com/fchollet/keras.git`
-
-`cd keras/`
-
-`git reset --hard 3b660145a7c83385bae682e072341c1b5709dbee`
-
-
-
-
 - download trained models from: https://drive.google.com/open?id=0B4XkHYbSv3yabGNtOFNjckFHWTQ and put them in folder trained_models
-- choose one of the models and run 
+- choose one of the models, for example NgramConvShorterFirstValidModel, go to corresponding directory and run: `python ../../source/vectors_compare.py 20 ngram_conv_old_valid_whole`
+
+`ngram_conv_old_valid_whole` is name of the model according to previous text, 
+
+`20` is number of millions of tokens processed by the weight file, you can choose 10, 20, 50 or 100 
+
 
