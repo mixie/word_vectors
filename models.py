@@ -8,9 +8,11 @@ from helpers import *
 from abc import ABCMeta,abstractmethod
 import numpy as np
 
+#constants
 NGRAM_SIZES = [20,19,18,17]
 NGRAM_NUM = sum(NGRAM_SIZES)
 
+#class for custom layer - change mask to zero vector
 class ZeroMaskedEntries(Layer):
 
     def __init__(self, **kwargs):
@@ -32,7 +34,7 @@ class ZeroMaskedEntries(Layer):
     def compute_mask(self, input_shape, input_mask=None):
         return None
 
-
+# abstract class for for model
 class VectorModel(object):
     __metaclass__ = ABCMeta
 
@@ -50,17 +52,21 @@ class VectorModel(object):
         self.min_ngram_size = 3
         self.max_ngram_size = 6
 
+    # create input for model for given word
     @abstractmethod
     def create_input_for_word(self,word,keys,change_ngram=None):
         pass
 
+    # creates embedding layer for model (different for each model)
     @abstractmethod
     def create_emb_layer(self):
         pass
 
+    # number of inputs for model, only inputs for input words are counted (not outputs and negative samples)
     def get_num_inputs(self):
         return 1
-    
+
+    # creates ngrams for given word
     def create_ngrams_for_word(self,word,keys,keys2 = None):
         word = "^"+word+"$"
         ngrams = []
@@ -71,18 +77,11 @@ class VectorModel(object):
                         ngrams.append(word[i:i+k])
         return ngrams
 
-    def create_false_ngrams_for_word(self,word,keys):
-        word = "^"+word+"$"
-        ngrams = []
-        for k in range(self.min_ngram_size,self.max_ngram_size+1):
-            for i in range(0,len(word)-k+1):
-                if word[i:i+k] in keys:
-                    ngrams.append(word[i:i+k])
-        return ngrams
-
+    # ngram keys for unknown ngrams and after word ngrams
     def get_first_ngram_keys(self):
         return ({"*****":0},["*****"],1)
 
+    # create whole model as described in thesis
     def create_model(self):
         (iw,emb_in,vv_iw) = self.create_emb_layer()
         self.emb_layer = emb_in
@@ -116,6 +115,7 @@ class VectorModel(object):
         self.keras_model = Model(input=inputs, output=ress)
         self.keras_model.compile(loss='binary_crossentropy', optimizer=TFOptimizer(tf.train.GradientDescentOptimizer(self.learning_rate)))
 
+    # predicts word vector for given word based on class model
     def predict_vector_for_word(self,word,keys,change_ngram=None,rand_int=None,keys2=None):
         if self.vector_layer_model is None:   
             self.vector_layer_model = Model(input=self.keras_model.input,
@@ -126,6 +126,7 @@ class VectorModel(object):
             inp.append(np.zeros((1,1)))
         return self.vector_layer_model.predict(inp)
 
+    # predicts ngram vectors for given word based on class model
     def predict_ngram_vectors_for_word(self,word,keys,change_ngram=None,rand_int=None):
         if self.emb_layer_model is None:
             self.emb_layer_model = Model(input=self.keras_model.input,
