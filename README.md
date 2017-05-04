@@ -35,6 +35,7 @@ Due to compatibility reasons, command line argument names for model classes are 
 ### Install Requirements
 
 Requirements: Python 2.7, pip
+
 Nice to have: virtualenv 
 
 - run `pip install requirements.txt`
