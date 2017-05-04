@@ -37,7 +37,7 @@ if args.imp is not None:
     import_ngrams = helpers.read_ngrams_from_file(args.imp)
 
 # dataset files
-datasets = {"rw":"../testdata/rw.txt","sim":"../testdata/combined.tab"}
+datasets = {"rw":"../../testdata/rw.txt","sim":"../../testdata/combined.tab"}
 
 # read model, ngrams, words
 with open('model.json', 'r') as json_file:
@@ -111,7 +111,7 @@ def compare_to_dataset(dataset_file,ngram_keys,simple_model=None,import_ngrams=N
                     if math.isnan(v1):
                         v1 = 0
                     ngram_results.append(1-v1)
-        r,p = spearmanr(np.array(file_data),np.array(ngram_results))
+        r = np.corrcoef(np.array(file_data),np.array(ngram_results))[0][1]
         return r
 
 
@@ -129,8 +129,8 @@ for layer in model.layers:
 
 for ds in datasets:
     if isinstance(my_model, helpers.models.WordVectorModel):
-        print i,ds,compare_to_dataset(datasets[ds],word_keys)
+        print ds,compare_to_dataset(datasets[ds],word_keys)
     else:
-        print i,ds,compare_to_dataset(datasets[ds],ngram_keys,simple_model,import_ngrams)
+        print ds,compare_to_dataset(datasets[ds],ngram_keys,simple_model,import_ngrams)
 
 

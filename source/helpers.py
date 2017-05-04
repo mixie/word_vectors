@@ -149,13 +149,13 @@ def generate_ngram_keys(model,word_keys,min_ngram_freq):
 # generate random english words, based on two different word sets
 def generate_random_english_words(num_words = None):
     words1 = []
-    with open("../testdata/350kwords.txt") as input1:
+    with open("../../testdata/350kwords.txt") as input1:
         for l in input1:
             words1.append(l.strip())
     if num_words is not None:
         return random.sample(words1,num_words/3)
     words2 = []
-    with open("../testdata/wiki-100k.txt") as input1:
+    with open("../../testdata/wiki-100k.txt") as input1:
         for l in input1:
             words2.append(l.strip())
     if num_words is not None:
@@ -167,7 +167,7 @@ def generate_random_english_words(num_words = None):
 # read previously generated random words to list
 def get_10000mixed_words():
     words = []
-    with open("../testdata/10000mixed.txt", "r") as input1:
+    with open("../../testdata/10000mixed.txt", "r") as input1:
         for l in input1:
             words.append(l.strip())
     return words
