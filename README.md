@@ -41,7 +41,7 @@ Nice to have: virtualenv
 - run `pip install -r requirements.txt`
 
 ### Run tests
-- download trained models from: https://drive.google.com/open?id=0B4XkHYbSv3yad1hfeHdCZUs3Z0E and put them in folder trained_models
+- download trained models from: https://drive.google.com/open?id=0B4XkHYbSv3yaNkVKRVV4aUZmcG8 and put them in folder trained_models
 - choose one of the models, for example NgramConvShorterFirstValidModel, go to corresponding directory and run: `python ../../source/vectors_compare.py 20 ngram_conv_old_valid_whole`
 
 `ngram_conv_old_valid_whole` is name of the model according to previous text, 
